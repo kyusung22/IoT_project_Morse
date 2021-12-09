@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+
+<head> 
+    <title>모스 번역기</title>
+    <style>
+        *{
+          
+          font-family: Consolas, sans-serif;
+        }
+        textarea {
+          width: 80%;
+          height: 100px;
+        }
+        #title{
+            font-size: 14px;
+            color: black;
+            background-color: #50586C;
+        }
+        #tt{
+            background-color: #DCE2F0;
+        }
+        #text0_label{font-size : 14px;
+            color: black;
+            font-weight:580;
+            background-color: #DCE2F0;
+        }
+        #text11_label{font-size : 14px;
+            color: black;
+            font-weight:580;
+            background-color: #DCE2F0;
+        }
+        #text15_label{font-size : 14px;
+            color: black;
+            font-weight:580;
+            background-color: #DCE2F0;
+        }
+        #textA1{
+            resize: none;
+            font-size: 20px;
+            border-style: inset
+        }
+        #textA2{
+            font-size: 20px;
+            resize: none;
+            border-style: dashed
+        }
+        #textA15{
+            font-size: 20px;
+            resize: none;
+            border-style: dashed
+        }
+        #footer{
+            padding-bottom: 3em;
+            bottom: 0;
+            width: 100%;
+            height: 30px;
+            text-align: center;
+            position: absolute;
+            color: #DCE2F0;
+            font-size: 8px;
+        }
+        .text0{text-align: left;
+            font-size : 14px;
+            float:left;
+            margin:20px;
+        }
+        .text11{text-align: left;
+            float:right;
+            margin:20px;
+        }
+        .text15{text-align: left;
+            float:right;
+            margin:20px;
+        }
+
+        #index{
+            text-align: center;
+            margin-left: 200;
+            position: static;
+        }
+        section {
+            padding-bottom: 110px; /* footer의 height값과 동일 */
+        }
+      </style>
+</head>
+
+<body id="title">
+    <header >
+            <h1 >
+                <span>
+                    <div id ="tt">라즈베리파이 기반 모스부호 번역기_</div>
+                </span>
+            </h1>
+    </header>
+
+    <section id="index">
+        <div id="text0"><br>
+            <span id="text0_label"> &nbsp;RESULT OUTPUT&nbsp; </span>
+            <p><textarea id="textA2" style="resize: none;" readonly placeholder="결과 출력 창" cols="30" rows="10"></textarea></p>
+               <form method="GET" name="form3" onsubmit="return false;">
+                <input id ="transCB" type="checkbox" name="transcb" onclick="trans(this.form)">
+                <label for="transCB">Morse to Eng　　</label><span id="div1"><input id ="playB" type="button" value="  Play LED  " onclick="play()"></span></form>
+                
+        </div>
+    
+        <br><br><br>
+        
+
+        <div id="text11" style="display:none">
+            <span id="text11_label"> &nbsp;Eng to Morse&nbsp; </span>
+                <form method="GET"action="/sub_Eng"name="form1" onsubmit="return false;">
+                    <p><textarea style="resize: none;" id="textA1" name='texta1' placeholder="Input some text." cols="30" rows="10"></textarea></p>
+                    <input type="button" value="TRANS" onclick="join()">　　
+                    <input type="button" value="SHOW" onclick="join4()">　　
+                </form>
+        </div>
+           
+        <div id="text15" style="display:block" >
+            <span id = "text15_label">&nbsp;Morse to Eng&nbsp; </span>
+                <form method="GET" name="form2"action="/sub_Mor" onsubmit="submitFunction(event)" >
+                    <p><textarea id="textA15" name='texta1.5' style="resize: none;" placeholder="Input by switch." cols="30" rows="10" readonly ></textarea></p>
+                    <!-- <input type="button" value="SHOW3.0"> -->
+                    <input type="button" value="TRANS" onclick="join2(event)">　　
+                    <input type="button" value="SHOW" onclick="join3()">　　
+                </form>
+        </div>
+    </section>
+<footer id ="footer">
+    <span>저자 :YoonKyuSung</span><br/>
+    <span>이메일 : rbtjd0312@naver.com</span><br/>
+    <span>Copyright 2021. All Rights Reserved.</span>
+</footer>
+    <script>
+        var ft =false;
+        function trans(formT){
+            document.getElementById("textA1").value=""
+            document.getElementById("textA15").value=""
+            document.getElementById("textA2").value=""
+            fetch("/inputMode")
+                    .then(response=> response.text())
+                    .then(data=> {
+                    console.log(data);
+                     });  
+            if(!ft&&formT.transCB.checked){
+                document.getElementById("text11").style.display="none";
+                document.getElementById("text15").style.display="block";
+                document.getElementById("playB").style.visibility="hidden";
+                        
+                document.getElementById("textA1").value=""
+                document.getElementById("textA15").value=""
+                document.getElementById("textA2").value=""
+            }else if(!ft&&!formT.transCB.checked){
+            document.getElementById("text15").style.display="none";
+            document.getElementById("text11").style.display="block";
+            document.getElementById("playB").style.visibility="visible";
+        }
+    }
+        function join(){
+            document.form1.submit();
+            document.form1.submit();
+        }
+        function join2(event){
+            event.preventDefault();   
+            ft= !ft;         
+            document.form2.submit();
+        }
+
+        function submitFunction(event){
+          event.preventDefault();
+        }
+        function join3(){
+            var str2 = "{{nata}}"
+                document.getElementById("textA15").value= "{{nata}}";
+            var str3 = "{{mata}}"
+                document.getElementById("textA2").value= "{{mata}}";
+            ft=!ft
+        }
+        function join4(){
+                var str1 = "{{data}}"
+                document.getElementById("textA2").value= str1;
+        }
+        function play(){
+            fetch("/play")
+            .then(response=> response.text())
+            .then(data=> {
+                console.log(data);
+            });
+        }
+    </script>
+    
+</body>
+</html>
