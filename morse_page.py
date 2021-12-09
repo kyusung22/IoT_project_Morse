@@ -1,6 +1,5 @@
 from flask import Flask, request
 from flask import render_template
-import RPi_I2C_driver
 import RPi.GPIO as GPIO 
 from time import *
 
@@ -18,6 +17,7 @@ red = 17
 green= 27 
 blue = 22
 led=4
+speed = 0.5 # 음과 음 사이 연주시간 설정 (0.5초)
 
 # 불필요한 warning 제거
 GPIO.setwarnings(False) 
@@ -31,16 +31,14 @@ GPIO.setup(red,GPIO.OUT)
 GPIO.setup(green,GPIO.OUT)
 GPIO.setup(blue,GPIO.OUT)
 GPIO.setup(led,GPIO.OUT)
+GPIO.setup(18, GPIO.OUT)
+# PWM 인스턴스 p를 만들고  GPIO 18번을 PWM 핀으로 설정, 주파수  = 100Hz
+p = GPIO.PWM(18, 262) 
 
 GPIO.output(red,0)
 GPIO.output(green,0)
 GPIO.output(blue,0)
 GPIO.output(led,0)
-
-lcd = RPi_I2C_driver.lcd(0x27)
-
-# Turn on the cursor:
-lcd.cursor()
 
 word_morse= ''
 word_eng= ''
@@ -175,33 +173,43 @@ def word_view_while():
             merge_e_c(morse_eng[word_list[i]])
     except KeyError:
         pass
-
-    lcd.clear()
-    lcd.print(word_eng_c)
     
     merge_e_c_toNULL()
 
 @app.route("/play") 
 def play():
-        global output_eng
-        try:
-            for i in range(len(output_eng)+1):
-                print(output_eng[i])
-                sleep(0.3)
-                if output_eng[i]=='.':
-                    GPIO.output(led,1)
-                    sleep(0.5)
-                    GPIO.output(led,0)
-                elif output_eng[i]=='-':
-                    GPIO.output(led,1)
-                    sleep(1.5)
-                    GPIO.output(led,0)
-                elif output_eng[i] == '/':
-                    sleep(1.5)
-                else:
-                    pass
-        except IndexError:
-            pass
+    global output_eng
+    global p
+    global speed
+    
+
+    for i in range(len(output_eng)-1):
+        print(output_eng[i])
+        sleep(0.3)
+        p.ChangeFrequency(262)
+        if output_eng[i]=='.':
+            GPIO.output(led,1)
+            p.start(10)
+            
+            sleep(0.5)
+            
+            GPIO.output(led,0)
+            p.stop()  
+        elif output_eng[i]=='-':
+            GPIO.output(led,1)
+            p.start(10)
+
+            sleep(1.5)
+            
+            GPIO.output(led,0)
+            p.stop()  
+        elif output_eng[i] == '/':
+            sleep(1.5) 
+        else:
+            sleep(0)
+
+    return str("ok")
+
 
 @app.route("/blueLight")
 def blueLight():
@@ -224,53 +232,62 @@ def redLight():
 @app.route("/yelLight")
 def yelLight():
     GPIO.output(red,1)
+    GPIO.output(green,1)
     sleep(0.2)
     GPIO.output(red,0)
+    GPIO.output(green,0)
 
-@app.route("/inputMode")
-def inputMode():
-    global count1
-    global count2
-    global word_morse
+try:
+    @app.route("/inputMode")
+    def inputMode():
+        global count1
+        global count2
+        global word_morse
+        isExit = 0
 
-    while 1:  #무한반복 
-    # 만약 버튼핀에 High(1) 신호가 들어오면, "Button pushed!" 을 출력합니다.
-        if GPIO.input(button1_pin) == GPIO.HIGH:
-            count1+=1
+        while 1:  #무한반복 
+            if GPIO.input(button1_pin) == GPIO.HIGH:
+                sleep(0.1)
+                count1+=1
 
-        if GPIO.input(button1_pin) == GPIO.LOW:
-            if(count1==1):       
-                blueLight()
-                merge_(".")
-                print("" + word_morse)
+
+            if GPIO.input(button1_pin) == GPIO.LOW:
+                if(count1==1):       
+                    blueLight()
+                    merge_(".")
+                    print("" + word_morse)
+                    
+
+                elif (count1>=2):
+                    greenLight()
+                    merge_("-")
+                    print("" + word_morse)
+
+                count1=0
+
+            if GPIO.input(button2_pin) == GPIO.HIGH:
+                sleep(0.1)
+                count2+=1
+
+            if GPIO.input(button2_pin) == GPIO.LOW:
+                if(count2>=1):
+                    merge_("/")
+                    yelLight() 
+                    word_view_while()
+                    # 버튼2 푸쉬 시 마다 글자가 나오게 하려면 ? --> 글자break가 한번에가 아닌 그때마다 완성되어야 
+                count2=0
                 
+            if ('//' in word_morse):
+                isExit+=1
+                if(isExit == 1):
+                    redLight()
+                    print(" 끝! ")
 
-            elif (count1>=2):
-                greenLight()
-                merge_("-")
-                print("" + word_morse)
-
-            count1=0
-
-        if GPIO.input(button2_pin) == GPIO.HIGH:
-            count2+=1
-        if GPIO.input(button2_pin) == GPIO.LOW:
-            if(count2>=1):
-                merge_("/")
-                yelLight() 
-                word_view_while()
-                # 버튼2 푸쉬 시 마다 글자가 나오게 하려면 ? --> 글자가 한번에가 아닌 그때마다 완성되어야 함
-
-            count2=0
-                
-        if ('//' in word_morse):
-                redLight()
-                print(" 끝! ")
-                break
-
-        sleep(0.2)    # 0.3초 딜레이 
-
-    word_view()
+            sleep(0.1)    # 0.3초 딜레이 
+        word_view()
+    
+except :
+    pass
 
 @app.route('/sub_Mor', methods=['POST','GET'])                       # index.html에서 이 주소를 접속하여 해당 함수를 실행
 def sub_Mor():
@@ -304,9 +321,12 @@ def sub_Eng():
         input_eng=temp
         list1= list(input_eng)
 
-        for i in range(len(list1)):
-            output_eng = output_eng+ (eng_morse[list1[i].upper()])+'/'
-
+        try:
+            for i in range(len(list1)):
+                output_eng = output_eng+ (eng_morse[list1[i].upper()])+'/'
+        except KeyError:
+            output_eng=" Sorry ! Only support for Alphabet. "
+        
         print("@@ : "+ input_eng)
         print("##################" + output_eng)
     return render_template('morse.html', data=str(output_eng))
