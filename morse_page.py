@@ -243,14 +243,14 @@ try:
         global count1
         global count2
         global word_morse
+        word_morse= ''
         isExit = 0
 
         while 1:  #무한반복 
             if GPIO.input(button1_pin) == GPIO.HIGH:
-                sleep(0.1)
+                sleep(0.2)
                 count1+=1
-
-
+                sleep(0.1)
             if GPIO.input(button1_pin) == GPIO.LOW:
                 if(count1==1):       
                     blueLight()
@@ -266,7 +266,7 @@ try:
                 count1=0
 
             if GPIO.input(button2_pin) == GPIO.HIGH:
-                sleep(0.1)
+                sleep(0.2)
                 count2+=1
 
             if GPIO.input(button2_pin) == GPIO.LOW:
